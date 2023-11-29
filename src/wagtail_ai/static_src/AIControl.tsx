@@ -192,15 +192,16 @@ function AIControl({
       ) : null}
       {error && draftailEditorWrapperRef?.current
         ? createPortal(
-            <>
+            <div className="w-field__errors">
               <svg
                 className="icon icon-warning w-field__errors-icon"
                 aria-hidden="true"
               >
                 <use href="#icon-warning"></use>
               </svg>
+              &nbsp;
               <p className="error-message">{error}</p>
-            </>,
+            </div>,
             draftailEditorWrapperRef?.current.parentNode.previousElementSibling,
           )
         : null}

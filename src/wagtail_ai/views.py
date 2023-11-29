@@ -1,8 +1,11 @@
 import os
 
+import anthropic
+import openai
 import tiktoken
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from every_ai import AIBackend
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from .ai import get_ai_backend
@@ -23,6 +26,35 @@ def _splitter_length(string):
     return len(encoding.encode(string))
 
 
+def _process_backend_request(full_prompt: str, backend: AIBackend[any]):
+    """
+    Method for processing prompt requests and handling errors.
+
+    Errors will either be an API or Python library error, this method uses exception
+    chaining to retain the original error and raise a more generic error message to be sent to the front-end.
+
+    :param full_prompt: The full prompt to be sent to the AI backend.
+    :param backend: The AI backend instance.
+
+    :return: The response message from the AI backend.
+    :raises AIHandlerException: Raised for specific error retaining the error scenarios to be communicated to the front-end.
+    """
+    try:
+        message = backend.chat(user_messages=[full_prompt])
+    except (anthropic.RateLimitError, openai.RateLimitError) as rate_limit_error:
+        # Handle rate error limits (429 responses) separately to inform users.
+        raise AIHandlerException(
+            "Rate limit exceeded. Please try again later."
+        ) from rate_limit_error
+    except Exception as e:
+        # Raise a more generic error to send to the front-end
+        raise AIHandlerException(
+            "Error processing request, Please try again later."
+        ) from e
+
+    return message
+
+
 def _replace_handler(prompt: Prompt, text: str):
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=DEFAULT_MAX_TOKENS, length_function=_splitter_length
@@ -32,7 +64,7 @@ def _replace_handler(prompt: Prompt, text: str):
     for split in texts:
         full_prompt = "\n".join([prompt.prompt, split])
         backend = get_ai_backend()
-        message = backend.chat(user_messages=[full_prompt])
+        message = _process_backend_request(full_prompt, backend)
         # Remove extra blank lines returned by the API
         message = os.linesep.join([s for s in message.splitlines() if s])
         text = text.replace(split, message)
@@ -44,10 +76,9 @@ def _append_handler(prompt: Prompt, text: str):
     tokens = _splitter_length(text)
     if tokens > DEFAULT_MAX_TOKENS:
         raise AIHandlerException("Cannot run completion on text this long")
-
     full_prompt = "\n".join([prompt.prompt, text])
     backend = get_ai_backend()
-    message = backend.chat(user_messages=[full_prompt])
+    message = _process_backend_request(full_prompt, backend)
     # Remove extra blank lines returned by the API
     message = os.linesep.join([s for s in message.splitlines() if s])
 

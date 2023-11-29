@@ -60,12 +60,33 @@ function ToolbarDropdown({
   useOutsideAlerter(toolBarRef, close);
 
   return (
-    <div ref={toolBarRef} className="Draftail-AI-ButtonDropdown">
-      {window.WAGTAIL_AI_PROMPTS.map((prompt) => (
-        <button type="button" onMouseDown={() => onAction(prompt)}>
-          <span>{prompt.label}</span> {prompt.description}
-        </button>
-      ))}
+    <div id="tippy-3" className="Draftail-AI-ButtonDropdown" ref={toolBarRef}>
+      <div
+        className="tippy-box"
+        data-state="visible"
+        tabIndex={-1}
+        data-theme="dropdown"
+        data-animation="fade"
+        style={{ maxWidth: '350px', transitionDuration: '300ms' }}
+        role="tooltip"
+        data-placement="bottom"
+      >
+        <div
+          className="tippy-content"
+          data-state="visible"
+          style={{ transitionDuration: '300ms' }}
+        >
+          <div data-w-dropdown-target="content" className="w-dropdown__content">
+            {window.WAGTAIL_AI_PROMPTS.map((prompt) => (
+              <button type="button" onMouseDown={() => onAction(prompt)}>
+                <div>{prompt.label}</div>
+                <span>{prompt.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="Draftail-AI-ButtonDropdown-Arrow tippy-arrow"></div>
+      </div>
     </div>
   );
 }
@@ -208,7 +229,7 @@ function AIControl({
   };
 
   return (
-    <>
+    <div style={{ display: 'inline-block', position: 'relative' }}>
       <CustomToolbarButton
         name="AI Tools"
         title="AI suggestions"
@@ -242,7 +263,7 @@ function AIControl({
             draftailEditorWrapperRef?.current,
           )
         : null}
-    </>
+    </div>
   );
 }
 

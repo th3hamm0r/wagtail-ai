@@ -24,7 +24,11 @@ const LOADING_MESSAGES = [
   'Interpreting your message, loading...',
 ];
 
-function LoadingOverlay() {
+function LoadingOverlay({
+  cancelHandler,
+}: {
+  cancelHandler: React.MouseEventHandler<HTMLButtonElement>;
+}) {
   const loadingMessage =
     LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)];
 
@@ -36,6 +40,10 @@ function LoadingOverlay() {
         </svg>
         {loadingMessage}
       </span>
+
+      <button onClick={cancelHandler} className="button button-secondary">
+        Cancel request
+      </button>
     </div>
   );
 }
@@ -122,8 +130,8 @@ class CustomToolbarButton extends React.PureComponent<
         // @ts-ignore
         icon ? jsxRuntime.jsx(Icon, { icon: icon }) : null,
         label
-          // @ts-ignore
-          ? jsxRuntime.jsx('span', {
+          ? // @ts-ignore
+            jsxRuntime.jsx('span', {
               className: 'Draftail-ToolbarButton__label',
               children: label,
             })
@@ -144,8 +152,17 @@ function AIControl({
   const editorState = getEditorState() as EditorState;
   const [isLoading, setIsLoading] = useState<Boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<Boolean>(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<null | string>(null);
   const draftailEditorWrapperRef = useRef<any>(null);
+
+  const abortController = new AbortController();
+
+  const cancelRequest: React.MouseEventHandler<HTMLButtonElement> = (e) => {
+    e.preventDefault();
+    // Call the abort method to cancel the request
+    abortController.abort();
+    setIsLoading(false); // Set loading to false to hide the overlay
+  };
 
   const handleAction = async (prompt: Prompt) => {
     setError(null);
@@ -153,9 +170,23 @@ function AIControl({
     setIsLoading(true);
     try {
       if (prompt.method === 'append') {
-        onChange(await processAction(editorState, prompt, handleAppend));
+        onChange(
+          await processAction(
+            editorState,
+            prompt,
+            handleAppend,
+            abortController,
+          ),
+        );
       } else {
-        onChange(await processAction(editorState, prompt, handleReplace));
+        onChange(
+          await processAction(
+            editorState,
+            prompt,
+            handleReplace,
+            abortController,
+          ),
+        );
       }
     } catch (err) {
       setError(err.message);
@@ -206,7 +237,10 @@ function AIControl({
           )
         : null}
       {isLoading && draftailEditorWrapperRef?.current
-        ? createPortal(<LoadingOverlay />, draftailEditorWrapperRef?.current)
+        ? createPortal(
+            <LoadingOverlay cancelHandler={cancelRequest} />,
+            draftailEditorWrapperRef?.current,
+          )
         : null}
     </>
   );

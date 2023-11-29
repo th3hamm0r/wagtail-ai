@@ -180,7 +180,7 @@ function AIControl({
     <>
       <CustomToolbarButton
         name="AI Tools"
-        title="AI prompts"
+        title="AI suggestions"
         icon={<WandIcon />}
         onClick={handleClick}
       />
